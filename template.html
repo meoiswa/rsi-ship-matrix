@@ -366,6 +366,7 @@ td.name-cell a:hover{ color:var(--accent); text-decoration:underline; }
 .badge.concept{ background:rgba(192,57,43,0.12); color:var(--danger); }
 .badge.in-concept, .badge.in-production{ background:rgba(15,125,114,0.15); color:var(--accent-2); }
 .dash{ color:var(--text-faint); }
+td.has-tip{ cursor:help; text-decoration:underline dotted var(--text-faint) 1px; text-underline-offset:3px; }
 .notes-input{
   background:transparent;
   border:1px dashed var(--border);
@@ -461,6 +462,7 @@ footer a{ color:var(--text-dim); }
     <button class="preset-btn" data-preset="best-ratio-rental">Best SCU per rental aUEC/day</button>
     <button class="preset-btn" data-preset="salvage">Salvage hulls</button>
     <button class="preset-btn" data-preset="combat">Combat, by hull HP</button>
+    <button class="preset-btn" data-preset="salvage-value">Best salvage/component value</button>
     <button class="preset-btn" data-preset="solo">Solo-flyable</button>
     <button class="preset-btn reset" data-preset="reset">Reset filters</button>
   </div>
@@ -494,7 +496,7 @@ footer a{ color:var(--text-dim); }
 
 <footer>
   <span>Specs pulled from the FleetYards.net community database. Verify current stats against the RSI pledge store before buying — game balance changes frequently.</span>
-  <span>Component/salvage values aren't published in structured data — use the Notes column to log your own estimates per hull.</span>
+  <span>"Est. Component Value" is a replacement-cost estimate — median aftermarket market price (via UEX Corp) of a same-category/size part for each stock component (via SCUnpacked), not the literal resale value of the stock part itself. Hover a value for its breakdown. Not every ship has stock loadout data yet; use the Notes column for your own estimates on those.</span>
 </footer>
 
 <script>
@@ -508,9 +510,9 @@ const COLUMNS = [
   {key:'focus', label:'Focus', group:'core', def:false, sort:'text'},
   {key:'crew', label:'Crew', group:'core', def:true, sort:'num', val:r=>r.crewMax ?? r.crewMin ?? null, fmt:r=> r.crewMin==null&&r.crewMax==null ? null : (r.crewMin===r.crewMax || r.crewMax==null ? fmtNum(r.crewMin) : `${fmtNum(r.crewMin)}–${fmtNum(r.crewMax)}`)},
   {key:'cargo', label:'Cargo', group:'core', def:true, sort:'num', unit:'SCU'},
-  {key:'ratio', label:'SCU / $1k', group:'econ', def:false, sort:'num', val:r=> (r.cargo && r.pledgePrice) ? r.cargo/(r.pledgePrice/1000) : null, fmt:r=>{const v=(r.cargo && r.pledgePrice)?r.cargo/(r.pledgePrice/1000):null; return v==null?null:v.toFixed(1);}},
-  {key:'ratioGame', label:'SCU / 1k aUEC', group:'econ', def:false, sort:'num', val:r=> (r.cargo && r.gamePrice) ? r.cargo/(r.gamePrice/1000) : null, fmt:r=>{const v=(r.cargo && r.gamePrice)?r.cargo/(r.gamePrice/1000):null; return v==null?null:v.toFixed(2);}},
-  {key:'ratioRental', label:'SCU / 1k aUEC-Day', group:'econ', def:false, sort:'num', val:r=> (r.cargo && r.rentalPriceMin) ? r.cargo/(r.rentalPriceMin/1000) : null, fmt:r=>{const v=(r.cargo && r.rentalPriceMin)?r.cargo/(r.rentalPriceMin/1000):null; return v==null?null:v.toFixed(2);}},
+  {key:'ratio', label:'SCU / $100', group:'econ', def:false, sort:'num', val:r=> (r.cargo && r.pledgePrice) ? r.cargo/(r.pledgePrice/100) : null, fmt:r=>{const v=(r.cargo && r.pledgePrice)?r.cargo/(r.pledgePrice/100):null; return v==null?null:v.toFixed(2);}},
+  {key:'ratioGame', label:'SCU / 100 aUEC', group:'econ', def:false, sort:'num', val:r=> (r.cargo && r.gamePrice) ? r.cargo/(r.gamePrice/100) : null, fmt:r=>{const v=(r.cargo && r.gamePrice)?r.cargo/(r.gamePrice/100):null; return v==null?null:v.toFixed(3);}},
+  {key:'ratioRental', label:'SCU / 100 aUEC-Day', group:'econ', def:false, sort:'num', val:r=> (r.cargo && r.rentalPriceMin) ? r.cargo/(r.rentalPriceMin/100) : null, fmt:r=>{const v=(r.cargo && r.rentalPriceMin)?r.cargo/(r.rentalPriceMin/100):null; return v==null?null:v.toFixed(3);}},
   {key:'pledgePrice', label:'Pledge $', group:'econ', def:true, sort:'num', prefix:'$'},
   {key:'gamePrice', label:'In-game aUEC', group:'econ', def:false, sort:'num'},
   {key:'buyPriceMin', label:'Buy (aUEC, best loc.)', group:'econ', def:false, sort:'num'},
@@ -527,10 +529,11 @@ const COLUMNS = [
   {key:'hydrogenFuelTankSize', label:'H2 Fuel', group:'perf', def:false, sort:'num', unit:'SCU'},
   {key:'hullHealth', label:'Hull HP', group:'combat', def:false, sort:'num'},
   {key:'weaponPoolSize', label:'Weapon HP', group:'combat', def:false, sort:'num'},
+  {key:'componentValueEst', label:'Est. Component Value', group:'combat', def:false, sort:'num', unit:'aUEC', tooltip:r=>r.componentValueBreakdown},
   {key:'notes', label:'My Notes', group:null, always:true, sort:null},
 ];
 
-const GROUP_LABELS = {core:'Core', econ:'Economy', dim:'Dimensions', perf:'Performance', combat:'Combat / Survivability'};
+const GROUP_LABELS = {core:'Core', econ:'Economy', dim:'Dimensions', perf:'Performance', combat:'Combat / Salvage'};
 
 function fmtNum(n){
   if(n==null || isNaN(n)) return null;
@@ -740,7 +743,7 @@ function colDisplay(c, r){
   let v = colValue(c, r);
   if(v==null) return '<span class="dash">—</span>';
   if(c.sort==='num'){
-    if(c.key==='mass' || c.key==='gamePrice' || c.key==='buyPriceMin' || c.key==='rentalPriceMin'){
+    if(c.key==='mass' || c.key==='gamePrice' || c.key==='buyPriceMin' || c.key==='rentalPriceMin' || c.key==='componentValueEst'){
       v = fmtThousands(v);
     } else {
       v = fmtNum(v);
@@ -815,6 +818,10 @@ function renderBody(){
         td.appendChild(input);
       } else {
         td.innerHTML = colDisplay(c, r);
+        if(c.tooltip){
+          const tip = c.tooltip(r);
+          if(tip){ td.title = tip; td.classList.add('has-tip'); }
+        }
       }
       tr.appendChild(td);
     });
@@ -867,6 +874,9 @@ function applyPreset(name){
     state.sortKey='hullHealth'; state.sortDir='desc';
   } else if(name==='solo'){
     state.crewMax=1; state.sortKey='pledgePrice'; state.sortDir='asc';
+  } else if(name==='salvage-value'){
+    if(!state.cols.has('componentValueEst')) state.cols.add('componentValueEst');
+    state.sortKey='componentValueEst'; state.sortDir='desc';
   }
   syncInputs();
   buildColumnManager();
