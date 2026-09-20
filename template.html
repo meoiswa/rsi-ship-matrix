@@ -513,6 +513,7 @@ const COLUMNS = [
   {key:'ratio', label:'SCU / $1k', group:'econ', def:false, sort:'num', val:r=> (r.cargo && r.pledgePrice) ? r.cargo/(r.pledgePrice/1000) : null, fmt:r=>{const v=(r.cargo && r.pledgePrice)?r.cargo/(r.pledgePrice/1000):null; return v==null?null:v.toFixed(1);}},
   {key:'ratioGame', label:'SCU / 1k aUEC', group:'econ', def:false, sort:'num', val:r=> (r.cargo && r.gamePrice) ? r.cargo/(r.gamePrice/1000) : null, fmt:r=>{const v=(r.cargo && r.gamePrice)?r.cargo/(r.gamePrice/1000):null; return v==null?null:v.toFixed(2);}},
   {key:'ratioRental', label:'SCU / 1k aUEC-Day', group:'econ', def:false, sort:'num', val:r=> (r.cargo && r.rentalPriceMin) ? r.cargo/(r.rentalPriceMin/1000) : null, fmt:r=>{const v=(r.cargo && r.rentalPriceMin)?r.cargo/(r.rentalPriceMin/1000):null; return v==null?null:v.toFixed(2);}},
+  {key:'aUecPerDollar', label:'aUEC / $', group:'econ', def:false, sort:'num', val:r=> (r.gamePrice && r.pledgePrice) ? r.gamePrice/r.pledgePrice : null, fmt:r=>{const v=(r.gamePrice && r.pledgePrice)?r.gamePrice/r.pledgePrice:null; return v==null?null:fmtThousands(v);}},
   {key:'pledgePrice', label:'Pledge $', group:'econ', def:true, sort:'num', prefix:'$'},
   {key:'gamePrice', label:'In-game aUEC', group:'econ', def:false, sort:'num'},
   {key:'buyPriceMin', label:'Buy (aUEC, best loc.)', group:'econ', def:false, sort:'num'},
