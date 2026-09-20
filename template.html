@@ -495,7 +495,7 @@ footer a{ color:var(--text-dim); }
 </main>
 
 <footer>
-  <span>Specs pulled from the FleetYards.net community database. Verify current stats against the RSI pledge store before buying — game balance changes frequently.</span>
+  <span>Specs pulled from the FleetYards.net community database. Verify current stats against the RSI pledge store before buying — game balance changes frequently. Cargo Total is cross-checked against SCUnpacked's data-mined cargo grids and corrected where FleetYards was missing one (e.g. the MOTH); "Internal"/"External" splits that data by whether the grid is exposed to space, where available.</span>
   <span>"Est. Component Value" is a replacement-cost estimate — median aftermarket market price (via UEX Corp) of a same-category/size part for each stock component (via SCUnpacked), not the literal resale value of the stock part itself. Hover a value for its breakdown. Not every ship has stock loadout data yet; use the Notes column for your own estimates on those.</span>
 </footer>
 
@@ -509,7 +509,9 @@ const COLUMNS = [
   {key:'size', label:'Size', group:'core', def:true, sort:'text'},
   {key:'focus', label:'Focus', group:'core', def:false, sort:'text'},
   {key:'crew', label:'Crew', group:'core', def:true, sort:'num', val:r=>r.crewMax ?? r.crewMin ?? null, fmt:r=> r.crewMin==null&&r.crewMax==null ? null : (r.crewMin===r.crewMax || r.crewMax==null ? fmtNum(r.crewMin) : `${fmtNum(r.crewMin)}–${fmtNum(r.crewMax)}`)},
-  {key:'cargo', label:'Cargo', group:'core', def:true, sort:'num', unit:'SCU'},
+  {key:'cargo', label:'Cargo Total', group:'core', def:true, sort:'num', unit:'SCU'},
+  {key:'cargoInternal', label:'Internal Cargo', group:'core', def:false, sort:'num', unit:'SCU'},
+  {key:'cargoExternal', label:'External Cargo', group:'core', def:false, sort:'num', unit:'SCU'},
   {key:'ratio', label:'SCU / $1k', group:'econ', def:false, sort:'num', val:r=> (r.cargo && r.pledgePrice) ? r.cargo/(r.pledgePrice/1000) : null, fmt:r=>{const v=(r.cargo && r.pledgePrice)?r.cargo/(r.pledgePrice/1000):null; return v==null?null:v.toFixed(1);}},
   {key:'ratioGame', label:'SCU / 1k aUEC', group:'econ', def:false, sort:'num', val:r=> (r.cargo && r.gamePrice) ? r.cargo/(r.gamePrice/1000) : null, fmt:r=>{const v=(r.cargo && r.gamePrice)?r.cargo/(r.gamePrice/1000):null; return v==null?null:v.toFixed(2);}},
   {key:'ratioRental', label:'SCU / 1k aUEC-Day', group:'econ', def:false, sort:'num', val:r=> (r.cargo && r.rentalPriceMin) ? r.cargo/(r.rentalPriceMin/1000) : null, fmt:r=>{const v=(r.cargo && r.rentalPriceMin)?r.cargo/(r.rentalPriceMin/1000):null; return v==null?null:v.toFixed(2);}},

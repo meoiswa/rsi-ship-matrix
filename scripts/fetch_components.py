@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Estimate each ship's stock-component replacement value and merge it into
+"""Estimate each ship's stock-component replacement value, and split its
+cargo capacity into internal vs external, then merge both into
 data/ships.json.
 
-Two sources, joined by component category + size:
+Component value, from two sources joined by component category + size:
 
 - UEX Corp API 2.0 (https://uexcorp.space) — live buy prices for every
   purchasable ship component (shields, power plants, coolers, quantum
@@ -21,6 +22,13 @@ number, just not identical to "what you'd get scrapping this exact ship."
 
 Ships not yet in scunpacked-data (mostly concepts / not flight-ready) are
 left without a component estimate rather than guessed at.
+
+Cargo capacity: FleetYards' totals are occasionally incomplete (e.g. the
+MOTH was missing two of its three cargo grids, understating its real 224
+SCU as 32). Where scunpacked-data has a non-empty `CargoGrids` list for a
+ship, we replace the cargo total with the sum of that list and additionally
+split it into internal vs external SCU, using the game files' own
+IsExternalContainer flag on each grid.
 """
 import glob
 import json
@@ -206,6 +214,25 @@ def compute_component_value(ship_json_path, class_size, price_buckets):
     return {"value": round(total), "breakdown": " · ".join(parts)}
 
 
+def compute_cargo_split(ship_json_path):
+    """Internal vs external SCU capacity from SCUnpacked's CargoGrids.
+
+    Only returns a result when CargoGrids is non-empty — some ships (mining
+    vehicles, a few capital ships) report a small non-zero cargo figure in
+    FleetYards that isn't backed by an actual named cargo grid in the game
+    files (more likely personal inventory or a stale figure). Rather than
+    guess at how to split a number we can't verify, those are left alone.
+    """
+    d = json.load(open(ship_json_path, encoding="utf-8"))
+    grids = d.get("CargoGrids") or []
+    if not grids:
+        return None
+
+    internal = sum(g.get("SCU") or 0 for g in grids if not g.get("IsExternalContainer"))
+    external = sum(g.get("SCU") or 0 for g in grids if g.get("IsExternalContainer"))
+    return {"total": internal + external, "internal": internal, "external": external}
+
+
 def main():
     print("Fetching UEX component price buckets...", file=sys.stderr)
     price_buckets = fetch_price_buckets()
@@ -222,15 +249,19 @@ def main():
 
         ships = json.load(open(DATA_PATH, encoding="utf-8"))
         matched = 0
+        cargo_fixed = 0
         for ship in ships:
             base = match_ship(ship, by_code, bases)
             if not base:
                 ship["componentValueEst"] = None
                 ship["componentValueBreakdown"] = None
+                ship["cargoInternal"] = None
+                ship["cargoExternal"] = None
                 continue
-            result = compute_component_value(
-                os.path.join(ships_dir, base + ".json"), class_size, price_buckets
-            )
+
+            ship_path = os.path.join(ships_dir, base + ".json")
+
+            result = compute_component_value(ship_path, class_size, price_buckets)
             if result:
                 matched += 1
                 ship["componentValueEst"] = result["value"]
@@ -239,7 +270,19 @@ def main():
                 ship["componentValueEst"] = None
                 ship["componentValueBreakdown"] = None
 
+            cargo = compute_cargo_split(ship_path)
+            if cargo:
+                if abs(cargo["total"] - (ship.get("cargo") or 0)) > 0.5:
+                    cargo_fixed += 1
+                ship["cargo"] = cargo["total"]
+                ship["cargoInternal"] = cargo["internal"]
+                ship["cargoExternal"] = cargo["external"]
+            else:
+                ship["cargoInternal"] = None
+                ship["cargoExternal"] = None
+
         print(f"Computed component value for {matched}/{len(ships)} ships", file=sys.stderr)
+        print(f"Corrected/split cargo total for {cargo_fixed} ships from scunpacked CargoGrids", file=sys.stderr)
 
     with open(DATA_PATH, "w", encoding="utf-8") as f:
         json.dump(ships, f, separators=(",", ":"))
