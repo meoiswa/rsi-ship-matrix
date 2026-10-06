@@ -532,6 +532,7 @@ const COLUMNS = [
   {key:'hydrogenFuelTankSize', label:'H2 Fuel', group:'perf', def:false, sort:'num', unit:'SCU'},
   {key:'hullHealth', label:'Hull HP', group:'combat', def:false, sort:'num'},
   {key:'weaponPoolSize', label:'Weapon HP', group:'combat', def:false, sort:'num'},
+  {key:'weaponConfig', label:'Weapon Config', group:'combat', def:false, sort:'num', align:'left', val:r=>r.weaponConfigMaxSize, fmt:r=>r.weaponConfig},
   {key:'componentValueEst', label:'Est. Component Value', group:'combat', def:false, sort:'num', unit:'aUEC', tooltip:r=>r.componentValueBreakdown},
   {key:'notes', label:'My Notes', group:null, always:true, sort:null},
 ];
@@ -675,7 +676,7 @@ function renderHead(){
     th.appendChild(handle);
     th.appendChild(document.createTextNode(c.label));
 
-    if(c.sort==='num') th.classList.add('num');
+    if(c.sort==='num' && c.align!=='left') th.classList.add('num');
     if(c.sort){
       th.addEventListener('click', ()=>{
         if(state.sortKey===c.key){ state.sortDir = state.sortDir==='asc'?'desc':'asc'; }
@@ -808,7 +809,7 @@ function renderBody(){
     const tr = document.createElement('tr');
     cols.forEach(c=>{
       const td = document.createElement('td');
-      if(c.sort==='num') td.classList.add('num');
+      if(c.sort==='num' && c.align!=='left') td.classList.add('num');
       if(c.key==='name'){
         td.classList.add('name-cell');
         td.innerHTML = r.storeUrl ? `<a href="${r.storeUrl}" target="_blank" rel="noopener">${r.name}</a>` : r.name;

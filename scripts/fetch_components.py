@@ -214,6 +214,55 @@ def compute_component_value(ship_json_path, class_size, price_buckets):
     return {"value": round(total), "breakdown": " · ".join(parts)}
 
 
+def compute_weapon_config(ship_json_path, class_size):
+    """A compact weapon-loadout string like "4xS3P 1T4xS3": pilot-fixed gun
+    groups (suffixed P) first, then turret groups (prefixed with how many
+    turrets share that loadout, then T), both sorted biggest-size first.
+
+    Also returns the largest weapon size anywhere in the loadout, so the
+    column can be sorted by "biggest gun in the set".
+    """
+    d = json.load(open(ship_json_path, encoding="utf-8"))
+
+    fixed_counts = {}
+    for w in ((d.get("Weaponry") or {}).get("FixedWeapons") or {}).get("Weapons") or []:
+        size = class_size.get(w.get("ClassName"))
+        if not size:
+            continue
+        fixed_counts[size] = fixed_counts.get(size, 0) + 1
+
+    turret_groups = {}
+    for t in d.get("RemoteTurrets") or []:
+        types = {t.get("TurretType")}
+        for m in t.get("Mounts") or []:
+            types.update(m.get("Types") or [])
+        if "Turret.GunTurret" not in types:
+            continue
+        sizes = [s for s in (t.get("WeaponSizes") or []) if s]
+        if not sizes:
+            continue
+        size_counts = {}
+        for s in sizes:
+            size_counts[s] = size_counts.get(s, 0) + 1
+        sig = tuple(sorted(size_counts.items(), key=lambda kv: -kv[0]))
+        turret_groups[sig] = turret_groups.get(sig, 0) + 1
+
+    if not fixed_counts and not turret_groups:
+        return None
+
+    tokens = []
+    max_size = 0
+    for size in sorted(fixed_counts, reverse=True):
+        tokens.append(f"{fixed_counts[size]}xS{size}P")
+        max_size = max(max_size, size)
+    for sig, turret_count in sorted(turret_groups.items(), key=lambda kv: -kv[0][0][0]):
+        inner = " ".join(f"{count}xS{size}" for size, count in sig)
+        tokens.append(f"{turret_count}T{inner}")
+        max_size = max(max_size, sig[0][0])
+
+    return {"config": " ".join(tokens), "maxSize": max_size}
+
+
 def compute_cargo_split(ship_json_path):
     """Internal vs external SCU capacity from SCUnpacked's CargoGrids.
 
@@ -257,6 +306,8 @@ def main():
                 ship["componentValueBreakdown"] = None
                 ship["cargoInternal"] = None
                 ship["cargoExternal"] = None
+                ship["weaponConfig"] = None
+                ship["weaponConfigMaxSize"] = None
                 continue
 
             ship_path = os.path.join(ships_dir, base + ".json")
@@ -269,6 +320,14 @@ def main():
             else:
                 ship["componentValueEst"] = None
                 ship["componentValueBreakdown"] = None
+
+            weapon_config = compute_weapon_config(ship_path, class_size)
+            if weapon_config:
+                ship["weaponConfig"] = weapon_config["config"]
+                ship["weaponConfigMaxSize"] = weapon_config["maxSize"]
+            else:
+                ship["weaponConfig"] = None
+                ship["weaponConfigMaxSize"] = None
 
             cargo = compute_cargo_split(ship_path)
             if cargo:
