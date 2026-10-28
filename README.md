@@ -21,7 +21,7 @@ Live at **https://scsm.meoiswa.cat**
 
 ```
 python3 scripts/fetch_data.py       # re-pulls data/ships.json from FleetYards
-python3 scripts/fetch_components.py # adds/refreshes componentValueEst + breakdown
+python3 scripts/fetch_components.py # adds/refreshes component + gun value estimates
 python3 scripts/build.py            # rebuilds dist/index.html locally, to preview
 ```
 
@@ -50,6 +50,25 @@ same category and size — real, sourced numbers, just not identical to
 shows its breakdown. Ships without loadout data yet in scunpacked-data
 (mostly concepts / not flight-ready) are left blank rather than guessed at
 — currently ~178 of 246 ships have an estimate.
+
+**Gun value estimate.** A separate column prices every stock gun on the
+ship, including gimballed and turret-mounted ones (point-defense cannons
+and rocket pods are excluded). Each gun is matched by name to its UEX
+listing and priced at the median buy price across terminals. Terminals
+almost never buy guns back, and when they do it's at a few percent of
+retail, so this is the market price a buyer would pay, not a terminal
+sell-back price. Ship-exclusive guns that nothing sells fall back to the
+median price of a same-size gun and are flagged as such in the hover
+breakdown.
+
+**Armor and weakest critical part.** Also from scunpacked-data: the
+Physical/Energy armor columns show how much of each damage type the hull
+resists (e.g. 20% means 20% less physical damage gets through than the raw
+weapon damage). The Hull HP column shows the ship's total HP with its
+weakest ship-destroying section's HP in parenthesis — for multi-hull ships
+(carriers, capital ships) that's whichever section has the least HP, since
+that's the one that actually caps how much punishment the ship can take
+before it's lost; hovering the value names that section.
 
 The "My Notes" column (saved in your browser's local storage) is still
 there for tracking your own numbers on top of all this.

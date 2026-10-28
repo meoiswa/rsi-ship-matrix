@@ -530,10 +530,18 @@ const COLUMNS = [
   {key:'scmSpeedBoosted', label:'SCM Boosted', group:'perf', def:false, sort:'num', unit:'m/s'},
   {key:'quantumFuelTankSize', label:'QT Fuel', group:'perf', def:false, sort:'num', unit:'µSCU'},
   {key:'hydrogenFuelTankSize', label:'H2 Fuel', group:'perf', def:false, sort:'num', unit:'SCU'},
-  {key:'hullHealth', label:'Hull HP', group:'combat', def:false, sort:'num'},
+  {key:'hullHealth', label:'Hull HP (weakest part)', group:'combat', def:false, sort:'num', fmt:r=>{
+    if(r.hullHealth==null) return null;
+    let v = fmtThousands(r.hullHealth);
+    if(r.criticalPartHp!=null) v += ` (${fmtThousands(r.criticalPartHp)})`;
+    return v;
+  }, tooltip:r=>r.criticalPartHp==null ? null : `Weakest ship-destroying section: ${r.criticalPartName||'?'}, ${fmtThousands(r.criticalPartHp)} HP`},
+  {key:'armorPhysical', label:'Armor (Physical)', group:'combat', def:false, sort:'num', unit:'%'},
+  {key:'armorEnergy', label:'Armor (Energy)', group:'combat', def:false, sort:'num', unit:'%'},
   {key:'weaponPoolSize', label:'Weapon HP', group:'combat', def:false, sort:'num'},
   {key:'weaponConfig', label:'Weapon Config', group:'combat', def:false, sort:'num', align:'left', val:r=>r.weaponConfigMaxSize, fmt:r=>r.weaponConfig},
   {key:'componentValueEst', label:'Est. Component Value', group:'combat', def:false, sort:'num', unit:'aUEC', tooltip:r=>r.componentValueBreakdown},
+  {key:'gunValueEst', label:'Est. Gun Value', group:'combat', def:false, sort:'num', unit:'aUEC', tooltip:r=>r.gunValueBreakdown},
   {key:'notes', label:'My Notes', group:null, always:true, sort:null},
 ];
 
@@ -747,7 +755,7 @@ function colDisplay(c, r){
   let v = colValue(c, r);
   if(v==null) return '<span class="dash">—</span>';
   if(c.sort==='num'){
-    if(c.key==='mass' || c.key==='gamePrice' || c.key==='buyPriceMin' || c.key==='rentalPriceMin' || c.key==='componentValueEst'){
+    if(c.key==='mass' || c.key==='gamePrice' || c.key==='buyPriceMin' || c.key==='rentalPriceMin' || c.key==='componentValueEst' || c.key==='gunValueEst'){
       v = fmtThousands(v);
     } else {
       v = fmtNum(v);

@@ -20,6 +20,14 @@ replacement-cost estimate: for each stock component, the median market price
 of an aftermarket part of the same category and size. It's a real, sourced
 number, just not identical to "what you'd get scrapping this exact ship."
 
+Gun value, separately: every stock gun on the ship — including gimballed
+and turret-mounted ones, which `FixedWeapons` leaves out — found by walking
+the full `Loadout` tree, then priced by exact name against UEX. Terminals
+barely buy guns back (a handful of listings, at a few % of retail), so this
+is the market price a buyer would pay, not a terminal sell-back price.
+Ship-exclusive guns that aren't sold anywhere fall back to the same-size
+median and are flagged in the breakdown.
+
 Ships not yet in scunpacked-data (mostly concepts / not flight-ready) are
 left without a component estimate rather than guessed at.
 
@@ -29,6 +37,19 @@ SCU as 32). Where scunpacked-data has a non-empty `CargoGrids` list for a
 ship, we replace the cargo total with the sum of that list and additionally
 split it into internal vs external SCU, using the game files' own
 IsExternalContainer flag on each grid.
+
+Armor, from scunpacked's `Armor.DamageMultipliers`: how much physical and
+energy damage the hull actually takes, expressed as a resistance percentage
+(e.g. 20 means the hull takes 20% less physical damage than the raw weapon
+damage would otherwise do).
+
+Critical part HP, from scunpacked's top-level `Health` and
+`DamageBeforeDestruction`: the latter lists the hull section(s) whose own
+destruction destroys the whole ship (for single-hull ships, usually the
+nose/body; capital ships split into multiple independently-destroyable
+sections). We report whichever section has the least HP alongside the
+ship's total HP, since that weakest section is what actually caps how much
+punishment the ship can take before it's lost.
 """
 import glob
 import json
@@ -72,7 +93,8 @@ def fmt_price(n):
 
 
 def fetch_price_buckets():
-    """(category_id, size) -> median UEX buy price."""
+    """Returns ((category_id, size) -> median UEX buy price,
+    normalized gun name -> median UEX buy price)."""
     item_meta = {}
     for cid in COMPONENT_CATEGORIES:
         data = curl_json(f"{UEX_BASE}/items?id_category={cid}")["data"]
@@ -92,7 +114,20 @@ def fetch_price_buckets():
         key = (meta["category"], size)
         raw_bucket.setdefault(key, []).append(r["price_buy"])
 
-    return {k: statistics.median(v) for k, v in raw_bucket.items()}
+    raw_gun = {}
+    for r in prices:
+        if r.get("id_category") != 32 or not r.get("price_buy"):
+            continue
+        # UEX lists some ship-specific copies as e.g. "M9A Cannon (Idris)";
+        # index the bare name too so the stock item still matches.
+        name = r.get("item_name") or ""
+        for n in {norm(name), norm(re.sub(r"\s*\(.*?\)\s*$", "", name))}:
+            raw_gun.setdefault(n, []).append(r["price_buy"])
+
+    return (
+        {k: statistics.median(v) for k, v in raw_bucket.items()},
+        {k: statistics.median(v) for k, v in raw_gun.items()},
+    )
 
 
 def download_scunpacked(tmpdir):
@@ -263,6 +298,61 @@ def compute_weapon_config(ship_json_path, class_size):
     return {"config": " ".join(tokens), "maxSize": max_size}
 
 
+def iter_stock_guns(loadout):
+    """Every installed ship gun in a loadout tree — pilot-fixed, gimballed and
+    turret-mounted alike. Point-defense cannons and rocket pods are skipped:
+    they're not removable, sellable items."""
+    for entry in loadout or []:
+        t = entry.get("Type") or ""
+        cls = entry.get("ClassName") or ""
+        if t == "WeaponGun.Gun":
+            if "_PDC_" not in cls and not cls.startswith("RPOD_"):
+                yield entry
+            continue
+        yield from iter_stock_guns(entry.get("Loadout"))
+
+
+def compute_gun_value(ship_json_path, gun_prices, price_buckets):
+    """Market value of a ship's stock guns.
+
+    Each gun is priced at the median UEX buy price of that exact gun where
+    it's sold in-game. Ship-exclusive guns that no terminal sells fall back
+    to the median price of a same-size gun, and are marked as such.
+    """
+    d = json.load(open(ship_json_path, encoding="utf-8"))
+    counts = {}  # (name, size, price, exact) -> count
+    missing = set()
+
+    for g in iter_stock_guns(d.get("Loadout")):
+        name = (g.get("Name") or "").strip()
+        size = g.get("MaxSize")
+        price = gun_prices.get(norm(name))
+        exact = price is not None
+        if not exact:
+            price = price_buckets.get((32, size))
+        if price is None:
+            missing.add(f"{name} S{size}")
+            continue
+        key = (name, size, price, exact)
+        counts[key] = counts.get(key, 0) + 1
+
+    if not counts:
+        return None
+
+    total = 0
+    parts = []
+    for (name, size, price, exact), n in sorted(counts.items(), key=lambda kv: -kv[1] * kv[0][2]):
+        total += price * n
+        qty = f"{n}x " if n > 1 else ""
+        note = "" if exact else ", not sold — S{} avg".format(size)
+        parts.append(f"{qty}{name} (S{size}{note}) ~{fmt_price(price)}")
+
+    if missing:
+        parts.append("no market price for: " + ", ".join(sorted(missing)))
+
+    return {"value": round(total), "breakdown": " · ".join(parts)}
+
+
 def compute_cargo_split(ship_json_path):
     """Internal vs external SCU capacity from SCUnpacked's CargoGrids.
 
@@ -282,9 +372,45 @@ def compute_cargo_split(ship_json_path):
     return {"total": internal + external, "internal": internal, "external": external}
 
 
+def compute_armor(ship_json_path):
+    """Physical/energy damage resistance from the ship's main armor layer,
+    as a percentage of incoming damage the hull resists (e.g. 20 means 20%
+    less physical damage gets through than the raw weapon damage), from
+    scunpacked's Armor.DamageMultipliers.*Change fields.
+    """
+    d = json.load(open(ship_json_path, encoding="utf-8"))
+    dm = (d.get("Armor") or {}).get("DamageMultipliers") or {}
+    phys = dm.get("PhysicalChange")
+    energy = dm.get("EnergyChange")
+    if phys is None and energy is None:
+        return None
+    return {
+        "physical": round(-phys * 100, 1) if phys is not None else None,
+        "energy": round(-energy * 100, 1) if energy is not None else None,
+    }
+
+
+def compute_critical_hp(ship_json_path):
+    """Total hull HP alongside the weakest ship-destroying section's HP,
+    from scunpacked's top-level Health and DamageBeforeDestruction (the
+    section(s) whose own destruction destroys the whole ship — for
+    multi-hull ships, the one with the least HP is what actually caps how
+    much punishment the ship can take).
+    """
+    d = json.load(open(ship_json_path, encoding="utf-8"))
+    total = d.get("Health")
+    sections = d.get("DamageBeforeDestruction") or []
+    if total is None or not sections:
+        return None
+    weakest = min(sections, key=lambda p: p.get("HP") if p.get("HP") is not None else float("inf"))
+    if weakest.get("HP") is None:
+        return None
+    return {"total": total, "weakestHp": weakest["HP"], "weakestName": weakest.get("Name")}
+
+
 def main():
     print("Fetching UEX component price buckets...", file=sys.stderr)
-    price_buckets = fetch_price_buckets()
+    price_buckets, gun_prices = fetch_price_buckets()
     print(f"  {len(price_buckets)} (category, size) price buckets", file=sys.stderr)
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -298,16 +424,25 @@ def main():
 
         ships = json.load(open(DATA_PATH, encoding="utf-8"))
         matched = 0
+        gun_matched = 0
         cargo_fixed = 0
+        armor_matched = 0
+        critical_matched = 0
         for ship in ships:
             base = match_ship(ship, by_code, bases)
             if not base:
                 ship["componentValueEst"] = None
                 ship["componentValueBreakdown"] = None
+                ship["gunValueEst"] = None
+                ship["gunValueBreakdown"] = None
                 ship["cargoInternal"] = None
                 ship["cargoExternal"] = None
                 ship["weaponConfig"] = None
                 ship["weaponConfigMaxSize"] = None
+                ship["armorPhysical"] = None
+                ship["armorEnergy"] = None
+                ship["criticalPartHp"] = None
+                ship["criticalPartName"] = None
                 continue
 
             ship_path = os.path.join(ships_dir, base + ".json")
@@ -329,6 +464,15 @@ def main():
                 ship["weaponConfig"] = None
                 ship["weaponConfigMaxSize"] = None
 
+            guns = compute_gun_value(ship_path, gun_prices, price_buckets)
+            if guns:
+                gun_matched += 1
+                ship["gunValueEst"] = guns["value"]
+                ship["gunValueBreakdown"] = guns["breakdown"]
+            else:
+                ship["gunValueEst"] = None
+                ship["gunValueBreakdown"] = None
+
             cargo = compute_cargo_split(ship_path)
             if cargo:
                 if abs(cargo["total"] - (ship.get("cargo") or 0)) > 0.5:
@@ -340,8 +484,29 @@ def main():
                 ship["cargoInternal"] = None
                 ship["cargoExternal"] = None
 
+            armor = compute_armor(ship_path)
+            if armor:
+                armor_matched += 1
+                ship["armorPhysical"] = armor["physical"]
+                ship["armorEnergy"] = armor["energy"]
+            else:
+                ship["armorPhysical"] = None
+                ship["armorEnergy"] = None
+
+            critical = compute_critical_hp(ship_path)
+            if critical:
+                critical_matched += 1
+                ship["criticalPartHp"] = critical["weakestHp"]
+                ship["criticalPartName"] = critical["weakestName"]
+            else:
+                ship["criticalPartHp"] = None
+                ship["criticalPartName"] = None
+
         print(f"Computed component value for {matched}/{len(ships)} ships", file=sys.stderr)
+        print(f"Computed gun value for {gun_matched}/{len(ships)} ships", file=sys.stderr)
         print(f"Corrected/split cargo total for {cargo_fixed} ships from scunpacked CargoGrids", file=sys.stderr)
+        print(f"Computed armor resistance for {armor_matched}/{len(ships)} ships", file=sys.stderr)
+        print(f"Computed weakest critical-part HP for {critical_matched}/{len(ships)} ships", file=sys.stderr)
 
     with open(DATA_PATH, "w", encoding="utf-8") as f:
         json.dump(ships, f, separators=(",", ":"))
