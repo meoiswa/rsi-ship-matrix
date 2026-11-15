@@ -114,6 +114,13 @@ header.top{
   color:var(--text-dim);
   letter-spacing:0.02em;
 }
+.nav{ display:flex; border:1px solid var(--border); border-radius:6px; overflow:hidden; margin-left:auto; }
+.nav a{
+  padding:6px 14px; font-weight:700; font-size:13px; text-decoration:none;
+  color:var(--text-dim); background:var(--surface-2); letter-spacing:.04em; text-transform:uppercase;
+}
+.nav a:hover{ color:var(--text); }
+.nav a.active{ background:var(--accent); color:var(--accent-ink); }
 .stat-strip{
   display:flex;
   gap:22px;
@@ -405,6 +412,10 @@ footer a{ color:var(--text-dim); }
     <div class="brand">SHIP<span>MATRIX</span></div>
     <div class="tagline">Star Citizen fleet comparison deck</div>
   </div>
+  <nav class="nav" aria-label="Views">
+    <a href="./" class="active" aria-current="page">Matrix</a>
+    <a href="compare.html">Compare</a>
+  </nav>
   <div class="stat-strip">
     <div class="stat"><div class="n" id="statShown">—</div><div class="l">Shown</div></div>
     <div class="stat"><div class="n" id="statTotal">—</div><div class="l">Tracked</div></div>

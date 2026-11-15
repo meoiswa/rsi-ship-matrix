@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ship Compare — Star Citizen head-to-head</title>
+<meta name="description" content="Pick any Star Citizen ships and compare them head to head: toggle which specs to show and see how each stat ranks among your selection.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛰️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f6f8;
+  --surface:#ffffff;
+  --surface-2:#eef1f4;
+  --surface-3:#e3e8ec;
+  --border:#d7dee4;
+  --text:#131a22;
+  --text-dim:#5b6b7a;
+  --text-faint:#8493a1;
+  --accent:#c9660a;
+  --accent-ink:#ffffff;
+  --accent-2:#0f7d72;
+  --good:#1f8a56;
+  --good-bg:rgba(31,138,86,0.12);
+  --danger:#c0392b;
+  --danger-bg:rgba(192,57,43,0.09);
+  --bar:rgba(15,125,114,0.35);
+  --shadow: 0 1px 2px rgba(20,30,45,0.06), 0 8px 24px rgba(20,30,45,0.06);
+  --header-h:64px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b0f14;
+    --surface:#121822;
+    --surface-2:#182130;
+    --surface-3:#202b3c;
+    --border:#2a3746;
+    --text:#e9eef3;
+    --text-dim:#93a5b6;
+    --text-faint:#66798c;
+    --accent:#ff9f43;
+    --accent-ink:#1a1206;
+    --accent-2:#35d0c0;
+    --good:#4ade80;
+    --good-bg:rgba(74,222,128,0.11);
+    --danger:#ff6b6b;
+    --danger-bg:rgba(255,107,107,0.09);
+    --bar:rgba(53,208,192,0.35);
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px rgba(0,0,0,0.35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b0f14;
+  --surface:#121822;
+  --surface-2:#182130;
+  --surface-3:#202b3c;
+  --border:#2a3746;
+  --text:#e9eef3;
+  --text-dim:#93a5b6;
+  --text-faint:#66798c;
+  --accent:#ff9f43;
+  --accent-ink:#1a1206;
+  --accent-2:#35d0c0;
+  --good:#4ade80;
+  --good-bg:rgba(74,222,128,0.11);
+  --danger:#ff6b6b;
+  --danger-bg:rgba(255,107,107,0.09);
+  --bar:rgba(53,208,192,0.35);
+  --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px rgba(0,0,0,0.35);
+  color-scheme: dark;
+}
+
+*{box-sizing:border-box;}
+html,body{ margin:0; padding:0; }
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Rajdhani',system-ui,sans-serif;
+  font-size:15px;
+  line-height:1.4;
+}
+::selection{ background:var(--accent); color:var(--accent-ink); }
+.mono{ font-family:'JetBrains Mono', ui-monospace, monospace; font-variant-numeric:tabular-nums; }
+a{ color:var(--accent-2); }
+button{ font-family:inherit; }
+button:focus-visible, input:focus-visible, label:focus-within{ outline:2px solid var(--accent); outline-offset:1px; }
+
+/* ---------- Header ---------- */
+header.top{
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  padding:14px 24px;
+  min-height:var(--header-h);
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg, var(--surface), var(--bg));
+  flex-wrap:wrap;
+}
+.wordmark{ display:flex; align-items:baseline; gap:10px; }
+.wordmark .brand{ font-family:'Orbitron',sans-serif; font-weight:800; font-size:22px; letter-spacing:0.06em; color:var(--text); text-decoration:none; }
+.wordmark .brand span{ color:var(--accent); }
+.wordmark .tagline{ font-size:13px; color:var(--text-dim); letter-spacing:0.02em; }
+.nav{ display:flex; border:1px solid var(--border); border-radius:6px; overflow:hidden; }
+.nav a{
+  padding:6px 14px; font-weight:700; font-size:13px; text-decoration:none;
+  color:var(--text-dim); background:var(--surface-2); letter-spacing:.04em; text-transform:uppercase;
+}
+.nav a:hover{ color:var(--text); }
+.nav a.active{ background:var(--accent); color:var(--accent-ink); }
+
+/* ---------- Layout ---------- */
+.layout{ display:flex; align-items:flex-start; min-height:calc(100vh - var(--header-h)); }
+
+/* ---------- Sidebar ---------- */
+.sidebar{
+  position:sticky; top:0;
+  flex:0 0 268px; width:268px;
+  height:100vh;
+  overflow:hidden;
+  border-right:1px solid var(--border);
+  background:var(--surface);
+  display:flex; flex-direction:column;
+  transition:flex-basis .18s ease, width .18s ease;
+}
+.sb-head{
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  padding:12px 12px 10px 16px;
+  border-bottom:1px solid var(--border);
+}
+.sb-title{ font-family:'Orbitron',sans-serif; font-weight:800; font-size:12px; letter-spacing:.12em; color:var(--text-dim); white-space:nowrap; }
+.sb-title .count{ color:var(--accent); font-family:'JetBrains Mono',monospace; font-weight:600; letter-spacing:0; margin-left:4px; }
+.icon-btn{
+  border:1px solid var(--border); background:var(--surface-2); color:var(--text-dim);
+  width:30px; height:30px; border-radius:6px; cursor:pointer; font-size:14px; line-height:1;
+  display:inline-flex; align-items:center; justify-content:center; flex:none;
+}
+.icon-btn:hover{ color:var(--text); border-color:var(--accent); }
+.sb-actions{ display:flex; gap:6px; padding:10px 16px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+.sb-body{ overflow-y:auto; flex:1; padding:6px 0 24px; }
+.mini-btn{
+  border:1px solid var(--border); background:transparent; color:var(--text-dim);
+  padding:3px 9px; border-radius:100px; font-size:12px; font-weight:700; cursor:pointer;
+}
+.mini-btn:hover{ border-color:var(--accent); color:var(--text); }
+.mini-btn.on{ background:var(--accent-2); border-color:var(--accent-2); color:var(--surface); }
+
+.sgroup{ border-bottom:1px solid var(--border); }
+.sgroup:last-child{ border-bottom:none; }
+.sg-head{
+  display:flex; align-items:center; gap:8px;
+  padding:10px 16px 6px;
+}
+.sg-name{
+  flex:1; border:none; background:none; padding:0; cursor:pointer; text-align:left;
+  font-size:11px; text-transform:uppercase; letter-spacing:.09em; font-weight:700; color:var(--text-faint);
+  display:flex; align-items:center; gap:6px;
+}
+.sg-name:before{ content:"▸"; color:var(--accent); font-size:10px; transition:transform .15s; display:inline-block; }
+.sgroup.open .sg-name:before{ transform:rotate(90deg); }
+.sg-name:hover{ color:var(--text); }
+.sg-count{ font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-faint); }
+.sg-all{ border:none; background:none; color:var(--accent-2); font-size:12px; font-weight:700; cursor:pointer; padding:2px 4px; }
+.sg-all:hover{ text-decoration:underline; }
+.sg-items{ display:none; padding:2px 8px 10px; }
+.sgroup.open .sg-items{ display:block; }
+.spec-toggle{
+  display:flex; align-items:center; gap:10px;
+  padding:5px 8px; border-radius:6px; cursor:pointer;
+  font-size:14px; font-weight:600; color:var(--text-dim);
+  user-select:none;
+}
+.spec-toggle:hover{ background:var(--surface-2); color:var(--text); }
+.spec-toggle input{ position:absolute; opacity:0; pointer-events:none; }
+.switch{
+  flex:none; width:28px; height:16px; border-radius:100px;
+  background:var(--surface-3); border:1px solid var(--border);
+  position:relative; transition:background .12s;
+}
+.switch:after{
+  content:""; position:absolute; top:1px; left:1px; width:12px; height:12px; border-radius:50%;
+  background:var(--text-faint); transition:transform .12s, background .12s;
+}
+.spec-toggle input:checked + .switch{ background:var(--accent); border-color:var(--accent); }
+.spec-toggle input:checked + .switch:after{ transform:translateX(12px); background:var(--accent-ink); }
+.spec-toggle input:checked ~ .lbl{ color:var(--text); }
+.spec-toggle .dir{ margin-left:auto; font-size:11px; color:var(--text-faint); font-family:'JetBrains Mono',monospace; }
+
+/* collapsed */
+.sb-rail-label{ display:none; }
+body.sb-collapsed .sidebar{ flex-basis:48px; width:48px; }
+body.sb-collapsed .sb-head{ flex-direction:column; padding:10px 8px; border-bottom:none; }
+body.sb-collapsed .sb-title, body.sb-collapsed .sb-actions, body.sb-collapsed .sb-body{ display:none; }
+body.sb-collapsed .sb-rail-label{
+  display:block; writing-mode:vertical-rl; transform:rotate(180deg);
+  font-family:'Orbitron',sans-serif; font-weight:800; font-size:11px; letter-spacing:.2em; color:var(--text-faint);
+  margin:14px auto 0; cursor:pointer; user-select:none;
+}
+.sb-backdrop{ display:none; }
+
+/* ---------- Main ---------- */
+main{ flex:1; min-width:0; padding:16px 24px 40px; }
+.toolbar{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+.picker{ position:relative; flex:0 1 360px; min-width:220px; }
+.picker input{
+  width:100%;
+  background:var(--surface); border:1px solid var(--border); border-radius:6px;
+  color:var(--text); padding:9px 12px 9px 34px;
+  font-family:'Rajdhani',sans-serif; font-size:15px; font-weight:600;
+  box-shadow:var(--shadow);
+}
+.picker:before{ content:"+"; position:absolute; left:12px; top:50%; transform:translateY(-52%); color:var(--accent); font-weight:800; font-size:20px; pointer-events:none; }
+.picker-list{
+  position:absolute; z-index:30; top:calc(100% + 4px); left:0; right:0;
+  max-height:min(420px, 60vh); overflow-y:auto;
+  background:var(--surface); border:1px solid var(--border); border-radius:8px; box-shadow:var(--shadow);
+  display:none; padding:4px;
+}
+.picker.open .picker-list{ display:block; }
+.pick{
+  display:flex; align-items:center; gap:10px; padding:6px 8px; border-radius:6px; cursor:pointer;
+}
+.pick img{ width:52px; height:30px; object-fit:cover; border-radius:4px; background:var(--surface-3); flex:none; }
+.pick .pn{ font-weight:700; color:var(--text); }
+.pick .pm{ font-size:12px; color:var(--text-dim); }
+.pick .ps{ margin-left:auto; font-size:11px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.06em; white-space:nowrap; }
+.pick.hl{ background:var(--surface-2); }
+.pick.added{ opacity:.45; cursor:default; }
+.pick.added .ps:after{ content:" · added"; color:var(--accent-2); }
+.pick-empty{ padding:12px; color:var(--text-faint); font-size:13px; }
+.tool-btn{
+  border:1px solid var(--border); background:var(--surface); color:var(--text-dim);
+  padding:8px 12px; border-radius:6px; font-weight:700; font-size:13px; cursor:pointer;
+}
+.tool-btn:hover{ color:var(--text); border-color:var(--accent); }
+.tool-btn.on{ background:var(--accent-2); border-color:var(--accent-2); color:var(--surface); }
+.tool-spacer{ flex:1; }
+.legend{ display:flex; gap:12px; align-items:center; font-size:12px; color:var(--text-dim); flex-wrap:wrap; }
+.legend i{ display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:-1px; }
+
+/* ---------- Comparison grid ---------- */
+.cmp-wrap{
+  overflow:auto;
+  max-height:calc(100vh - 32px);
+  border:1px solid var(--border); border-radius:8px; box-shadow:var(--shadow); background:var(--surface);
+}
+table.cmp{ border-collapse:separate; border-spacing:0; min-width:100%; }
+.cmp th, .cmp td{ border-bottom:1px solid var(--border); }
+.cmp .lblcol{
+  position:sticky; left:0; z-index:2;
+  background:var(--surface);
+  width:190px; min-width:160px; max-width:210px;
+  padding:9px 14px;
+  text-align:left; font-size:13px; font-weight:700; color:var(--text-dim);
+  border-right:1px solid var(--border);
+}
+.cmp thead th{ position:sticky; top:0; z-index:3; background:var(--surface-3); vertical-align:top; }
+.cmp thead th.lblcol{ z-index:4; vertical-align:bottom; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-faint); }
+.shipcol{ width:220px; min-width:200px; max-width:240px; }
+.ship-head{ padding:10px 12px 12px; text-align:left; font-weight:600; }
+.sh-img{
+  position:relative; width:100%; aspect-ratio:16/9; border-radius:6px; overflow:hidden; background:var(--surface-2);
+  margin-bottom:8px;
+}
+.sh-img img{ width:100%; height:100%; object-fit:cover; display:block; }
+.sh-tools{ position:absolute; top:6px; right:6px; display:flex; gap:4px; opacity:0; transition:opacity .12s; }
+.ship-head:hover .sh-tools, .ship-head:focus-within .sh-tools{ opacity:1; }
+@media (hover:none){ .sh-tools{ opacity:1; } }
+.sh-tools button{
+  width:24px; height:24px; border-radius:5px; border:none; cursor:pointer;
+  background:rgba(10,14,20,0.72); color:#fff; font-size:13px; line-height:1;
+}
+.sh-tools button:hover{ background:var(--accent); color:var(--accent-ink); }
+.sh-tools button.rm:hover{ background:var(--danger); color:#fff; }
+.sh-tools button:disabled{ opacity:.3; cursor:default; background:rgba(10,14,20,0.72); color:#fff; }
+.sh-name{ font-size:17px; font-weight:700; color:var(--text); line-height:1.15; }
+.sh-name a{ color:inherit; text-decoration:none; }
+.sh-name a:hover{ color:var(--accent); text-decoration:underline; }
+.sh-manu{ font-size:12px; color:var(--text-dim); margin-top:2px; }
+.sh-wins{ margin-top:8px; font-size:12px; color:var(--text-dim); display:flex; align-items:center; gap:6px; }
+.sh-wins b{ font-family:'JetBrains Mono',monospace; color:var(--text); font-size:13px; }
+.sh-wins.top b{ color:var(--good); }
+.crown{ font-size:10px; font-weight:800; letter-spacing:.08em; color:var(--good); border:1px solid var(--good); border-radius:100px; padding:0 6px; }
+
+.cmp tbody tr.grp td{
+  background:var(--surface-2);
+  font-size:11px; text-transform:uppercase; letter-spacing:.1em; font-weight:700; color:var(--accent);
+  padding:7px 14px;
+}
+.cmp tbody tr.grp td.lblcol{ background:var(--surface-2); }
+.cmp tbody tr:not(.grp):hover td{ background-color:var(--surface-2); }
+.cmp tbody tr:not(.grp):hover td.lblcol{ color:var(--text); }
+
+td.v{ padding:8px 12px; vertical-align:middle; font-size:14px; position:relative; }
+.vline{ display:flex; align-items:baseline; gap:8px; }
+.vtxt{ font-family:'JetBrains Mono',monospace; font-variant-numeric:tabular-nums; font-size:13.5px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.vtxt.text{ font-family:'Rajdhani',sans-serif; font-size:14.5px; font-weight:600; white-space:normal; }
+.unit{ color:var(--text-faint); font-size:11px; margin-left:2px; }
+.rank{
+  margin-left:auto; flex:none;
+  font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600;
+  color:var(--text-faint);
+}
+.bar{ height:4px; border-radius:2px; background:var(--surface-3); margin-top:6px; overflow:hidden; }
+.bar > span{ display:block; height:100%; background:var(--bar); border-radius:2px; }
+td.v.best{ background:var(--good-bg); }
+td.v.best .vtxt{ color:var(--good); font-weight:600; }
+td.v.best .rank{ color:var(--good); }
+td.v.best .bar > span{ background:var(--good); }
+td.v.worst{ background:var(--danger-bg); }
+td.v.worst .rank{ color:var(--danger); }
+td.v.worst .bar > span{ background:var(--danger); opacity:.7; }
+.cmp tbody tr:not(.grp):hover td.v.best{ background:var(--good-bg); }
+.cmp tbody tr:not(.grp):hover td.v.worst{ background:var(--danger-bg); }
+td.has-tip .vtxt{ cursor:help; text-decoration:underline dotted var(--text-faint) 1px; text-underline-offset:3px; }
+.dash{ color:var(--text-faint); }
+.lbl-dir{ display:block; font-size:10.5px; font-weight:600; color:var(--text-faint); letter-spacing:.02em; margin-top:1px; }
+.badge{ display:inline-block; padding:2px 8px; border-radius:100px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+.badge.flight-ready{ background:rgba(31,138,86,0.15); color:var(--good); }
+.badge.in-concept{ background:rgba(15,125,114,0.15); color:var(--accent-2); }
+.tag{ display:inline-block; font-size:11px; font-weight:700; color:var(--text-dim); border:1px solid var(--border); border-radius:4px; padding:0 5px; margin:1px 3px 1px 0; }
+
+.empty{
+  border:1px dashed var(--border); border-radius:10px; padding:48px 24px; text-align:center; color:var(--text-dim);
+  background:var(--surface);
+}
+.empty h2{ font-family:'Orbitron',sans-serif; font-size:16px; letter-spacing:.08em; color:var(--text); margin:0 0 6px; }
+.empty p{ margin:0 0 18px; }
+.starter{ display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+.starter button{
+  border:1px solid var(--accent-2); background:transparent; color:var(--accent-2);
+  padding:7px 13px; border-radius:6px; font-weight:700; font-size:13px; cursor:pointer;
+}
+.starter button:hover{ background:var(--accent-2); color:var(--surface); }
+.hint{ font-size:12px; color:var(--text-faint); margin-top:10px; }
+.toast{
+  position:fixed; bottom:20px; left:50%; transform:translateX(-50%) translateY(20px);
+  background:var(--text); color:var(--bg); padding:8px 14px; border-radius:6px; font-weight:700; font-size:13px;
+  opacity:0; pointer-events:none; transition:opacity .15s, transform .15s; z-index:50;
+}
+.toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+footer{ padding:18px 0 0; color:var(--text-faint); font-size:12px; }
+
+@media (max-width: 760px){
+  header.top{ padding-left:16px; padding-right:16px; }
+  .wordmark .tagline{ display:none; }
+  main{ padding:12px 16px 32px; }
+  .sidebar{
+    position:fixed; left:0; top:0; z-index:40; height:100vh;
+    box-shadow:var(--shadow);
+  }
+  body.sb-collapsed .sidebar{ box-shadow:none; }
+  body:not(.sb-collapsed) .sb-backdrop{ display:block; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:39; }
+  body{ padding-left:48px; }
+  header.top{ padding-left:12px; }
+  .picker{ flex:1 1 100%; }
+  .cmp .lblcol{ width:120px; min-width:110px; padding:8px 10px; font-size:12px; }
+  .shipcol{ min-width:160px; width:170px; }
+  .tool-spacer{ display:none; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wordmark">
+    <a class="brand" href="./">SHIP<span>MATRIX</span></a>
+    <div class="tagline">Head-to-head ship comparison</div>
+  </div>
+  <nav class="nav" aria-label="Views">
+    <a href="./">Matrix</a>
+    <a href="compare.html" class="active" aria-current="page">Compare</a>
+  </nav>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar" aria-label="Spec selection">
+    <div class="sb-head">
+      <div class="sb-title">SPECS<span class="count" id="specCount"></span></div>
+      <button class="icon-btn" id="sbToggle" aria-expanded="true" aria-controls="sbBody" title="Collapse specs panel">«</button>
+      <div class="sb-rail-label" id="sbRail">SPECS</div>
+    </div>
+    <div class="sb-actions">
+      <button class="mini-btn" id="specAll">All</button>
+      <button class="mini-btn" id="specNone">None</button>
+      <button class="mini-btn" id="specDefault">Default</button>
+      <button class="mini-btn" id="diffOnly" title="Hide specs where every selected ship has the same value">Differences only</button>
+    </div>
+    <div class="sb-body" id="sbBody"></div>
+  </aside>
+  <div class="sb-backdrop" id="sbBackdrop"></div>
+
+  <main>
+    <div class="toolbar">
+      <div class="picker" id="picker">
+        <input type="search" id="pickerInput" placeholder="Add a ship — name, manufacturer, role…" autocomplete="off"
+               role="combobox" aria-expanded="false" aria-controls="pickerList" aria-autocomplete="list">
+        <div class="picker-list" id="pickerList" role="listbox"></div>
+      </div>
+      <button class="tool-btn" id="copyLink" title="Copy a link to this comparison">Copy link</button>
+      <button class="tool-btn" id="clearAll">Clear ships</button>
+      <div class="tool-spacer"></div>
+      <div class="legend">
+        <span><i style="background:var(--good)"></i>Best among selected</span>
+        <span><i style="background:var(--danger)"></i>Worst</span>
+        <span><i style="background:var(--bar)"></i>Relative to max</span>
+      </div>
+    </div>
+
+    <div id="stage"></div>
+
+    <footer>
+      Specs from the FleetYards.net community database, with cargo, armor, critical-part HP and loadout values cross-referenced from SCUnpacked and UEX Corp — see the <a href="./">Matrix</a> page notes. Ranks use competition ranking (ties share a place); blank values are left out of the ranking.
+    </footer>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SHIPS = __SHIPS_DATA__;
+const BY_SLUG = new Map(SHIPS.map(s=>[s.slug, s]));
+const MAX_SHIPS = 12;
+
+const fmtInt = n => Math.round(n).toLocaleString('en-US');
+const fmtDec = (n, d=2) => (Math.round(n*10**d)/10**d).toLocaleString('en-US', {maximumFractionDigits:d});
+const esc = s => String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ratio = (a,b,mul=1) => (a && b) ? a/(b/mul) : null;
+
+/* better: 'high' | 'low' | null (neutral: bar only, no best/worst) */
+const SPECS = [
+  {key:'manufacturer', label:'Manufacturer', group:'overview', kind:'text', def:true},
+  {key:'classification', label:'Role', group:'overview', kind:'text', def:true},
+  {key:'focus', label:'Focus', group:'overview', kind:'text', def:true},
+  {key:'size', label:'Size', group:'overview', kind:'text', def:true},
+  {key:'productionStatus', label:'Status', group:'overview', kind:'status', def:true},
+  {key:'availability', label:'Availability', group:'overview', kind:'html', def:false, html:r=>{
+    const t=[];
+    if(r.onSale) t.push('Pledge store');
+    if(r.buyPriceMin!=null) t.push('Buyable in-game');
+    if(r.rentalPriceMin!=null) t.push('Rentable');
+    return t.length ? t.map(x=>`<span class="tag">${x}</span>`).join('') : null;
+  }},
+  {key:'crew', label:'Crew', group:'overview', kind:'num', better:null, def:true,
+    val:r=>r.crewMax ?? r.crewMin ?? null,
+    fmt:r=> r.crewMin==null&&r.crewMax==null ? null : (r.crewMin===r.crewMax || r.crewMax==null ? `${r.crewMin}` : `${r.crewMin ?? '?'}–${r.crewMax}`)},
+
+  {key:'cargo', label:'Cargo total', group:'cargo', kind:'num', better:'high', unit:'SCU', def:true},
+  {key:'cargoInternal', label:'Internal cargo', group:'cargo', kind:'num', better:'high', unit:'SCU', def:false},
+  {key:'cargoExternal', label:'External cargo', group:'cargo', kind:'num', better:'high', unit:'SCU', def:false},
+  {key:'personalInventory', label:'Personal inventory', group:'cargo', kind:'num', better:'high', unit:'SCU', def:false},
+
+  {key:'pledgePrice', label:'Pledge price', group:'econ', kind:'num', better:'low', prefix:'$', def:true},
+  {key:'gamePrice', label:'In-game price', group:'econ', kind:'num', better:'low', unit:'aUEC', int:true, def:true},
+  {key:'buyPriceMin', label:'Buy (best location)', group:'econ', kind:'num', better:'low', unit:'aUEC', int:true, def:false},
+  {key:'rentalPriceMin', label:'Rent / day', group:'econ', kind:'num', better:'low', unit:'aUEC', int:true, def:false},
+  {key:'ratio', label:'SCU per $1k', group:'econ', kind:'num', better:'high', dec:1, def:false, val:r=>ratio(r.cargo, r.pledgePrice, 1000)},
+  {key:'ratioGame', label:'SCU per 1k aUEC', group:'econ', kind:'num', better:'high', dec:2, def:false, val:r=>ratio(r.cargo, r.gamePrice, 1000)},
+  {key:'ratioRental', label:'SCU per 1k aUEC/day', group:'econ', kind:'num', better:'high', dec:2, def:false, val:r=>ratio(r.cargo, r.rentalPriceMin, 1000)},
+  {key:'aUecPerDollar', label:'aUEC per $', group:'econ', kind:'num', better:'high', int:true, def:false, val:r=>ratio(r.gamePrice, r.pledgePrice)},
+
+  {key:'scmSpeed', label:'SCM speed', group:'perf', kind:'num', better:'high', unit:'m/s', def:true},
+  {key:'scmSpeedBoosted', label:'SCM boosted', group:'perf', kind:'num', better:'high', unit:'m/s', def:false},
+  {key:'maxSpeed', label:'Max speed', group:'perf', kind:'num', better:'high', unit:'m/s', def:true},
+  {key:'quantumFuelTankSize', label:'Quantum fuel', group:'perf', kind:'num', better:'high', unit:'µSCU', def:false},
+  {key:'hydrogenFuelTankSize', label:'Hydrogen fuel', group:'perf', kind:'num', better:'high', unit:'SCU', def:false},
+
+  {key:'hullHealth', label:'Hull HP', group:'combat', kind:'num', better:'high', int:true, def:true},
+  {key:'criticalPartHp', label:'Weakest critical part', group:'combat', kind:'num', better:'high', int:true, unit:'HP', def:true,
+    tooltip:r=>r.criticalPartName ? `Weakest ship-destroying section: ${r.criticalPartName}` : null},
+  {key:'armorPhysical', label:'Armor (physical)', group:'combat', kind:'num', better:'high', unit:'%', def:true},
+  {key:'armorEnergy', label:'Armor (energy)', group:'combat', kind:'num', better:'high', unit:'%', def:true},
+  {key:'weaponPoolSize', label:'Weapon hardpoints', group:'combat', kind:'num', better:'high', def:false},
+  {key:'weaponConfig', label:'Weapon config', group:'combat', kind:'num', better:'high', def:true, textual:true,
+    val:r=>r.weaponConfigMaxSize ?? null, fmt:r=>r.weaponConfig || null,
+    tooltip:r=>r.weaponConfigMaxSize!=null ? `Largest gun: S${r.weaponConfigMaxSize}` : null, note:'ranked by largest gun'},
+  {key:'gunValueEst', label:'Est. gun value', group:'combat', kind:'num', better:'high', unit:'aUEC', int:true, def:false, tooltip:r=>r.gunValueBreakdown},
+  {key:'componentValueEst', label:'Est. component value', group:'combat', kind:'num', better:'high', unit:'aUEC', int:true, def:false, tooltip:r=>r.componentValueBreakdown},
+
+  {key:'length', label:'Length', group:'dim', kind:'num', better:null, unit:'m', def:false},
+  {key:'beam', label:'Beam', group:'dim', kind:'num', better:null, unit:'m', def:false},
+  {key:'height', label:'Height', group:'dim', kind:'num', better:null, unit:'m', def:false},
+  {key:'mass', label:'Mass', group:'dim', kind:'num', better:null, unit:'kg', int:true, def:false},
+];
+const GROUPS = [
+  ['overview','Overview'], ['cargo','Cargo'], ['econ','Economy'], ['perf','Performance'], ['combat','Combat / Salvage'], ['dim','Dimensions'],
+];
+const STARTERS = [
+  ['Starter ships', ['rsi-aurora-mk-i-mr','cnou-mustang-alpha','aegs-avenger-titan','anvl-c8x-pisces-expedition']],
+  ['Medium haulers', ['drak-cutlass-black','misc-freelancer-max','crus-c2-hercules','argo-raft']],
+  ['Light fighters', ['aegs-gladius','anvl-arrow','aegs-avenger-titan']],
+];
+
+/* ---------- state ---------- */
+const LS = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+};
+const defaultSpecs = () => SPECS.filter(s=>s.def).map(s=>s.key);
+const known = new Set(SPECS.map(s=>s.key));
+const state = {
+  ships: [],
+  specs: new Set((LS.get('shipcompare_specs', null) || defaultSpecs()).filter(k=>known.has(k))),
+  openGroups: new Set(LS.get('shipcompare_groups', GROUPS.map(g=>g[0]))),
+  diffOnly: !!LS.get('shipcompare_diff', false),
+};
+
+function readShipsFromHash(){
+  const m = location.hash.match(/ships=([^&]*)/);
+  if(!m) return null;
+  return decodeURIComponent(m[1]).split(',').filter(s=>BY_SLUG.has(s));
+}
+state.ships = (readShipsFromHash() ?? LS.get('shipcompare_ships', [])).filter(s=>BY_SLUG.has(s)).slice(0, MAX_SHIPS);
+state.ships = [...new Set(state.ships)];
+
+function persistShips(){
+  LS.set('shipcompare_ships', state.ships);
+  history.replaceState(null, '', state.ships.length ? '#ships=' + state.ships.join(',') : location.pathname + location.search);
+}
+const persistSpecs = () => LS.set('shipcompare_specs', [...state.specs]);
+
+/* ---------- value helpers ---------- */
+function specVal(spec, r){
+  const v = spec.val ? spec.val(r) : r[spec.key];
+  return (v==null || (typeof v==='number' && !isFinite(v))) ? null : v;
+}
+function specDisplay(spec, r){
+  if(spec.kind==='status'){
+    const s = r.productionStatus;
+    return s ? `<span class="badge ${esc(s)}">${esc(s.replace(/-/g,' '))}</span>` : null;
+  }
+  if(spec.kind==='html') return spec.html(r);
+  if(spec.fmt){ const f = spec.fmt(r); return f==null ? null : esc(f); }
+  const v = specVal(spec, r);
+  if(v==null) return null;
+  if(spec.kind==='text') return esc(v);
+  let s = spec.int ? fmtInt(v) : fmtDec(v, spec.dec ?? 2);
+  if(spec.prefix) s = spec.prefix + s;
+  if(spec.unit) s += `<span class="unit">${esc(spec.unit)}</span>`;
+  return s;
+}
+/* competition ranking: [10, 10, 7] -> 1, 1, 3 */
+function rankAll(vals, better){
+  const present = vals.map((v,i)=>({v,i})).filter(x=>x.v!=null);
+  const out = vals.map(()=>null);
+  if(!better) return out;
+  present.sort((a,b)=> better==='high' ? b.v-a.v : a.v-b.v);
+  present.forEach((x,idx)=>{
+    out[x.i] = (idx>0 && present[idx-1].v===x.v) ? out[present[idx-1].i] : idx+1;
+  });
+  return out;
+}
+
+/* ---------- sidebar ---------- */
+function renderSidebar(){
+  const body = document.getElementById('sbBody');
+  body.innerHTML = '';
+  GROUPS.forEach(([g, gLabel])=>{
+    const specs = SPECS.filter(s=>s.group===g);
+    const on = specs.filter(s=>state.specs.has(s.key)).length;
+    const wrap = document.createElement('div');
+    wrap.className = 'sgroup' + (state.openGroups.has(g) ? ' open' : '');
+
+    const head = document.createElement('div');
+    head.className = 'sg-head';
+    const name = document.createElement('button');
+    name.className = 'sg-name';
+    name.setAttribute('aria-expanded', state.openGroups.has(g));
+    name.innerHTML = `${esc(gLabel)} <span class="sg-count">${on}/${specs.length}</span>`;
+    name.addEventListener('click', ()=>{
+      state.openGroups.has(g) ? state.openGroups.delete(g) : state.openGroups.add(g);
+      LS.set('shipcompare_groups', [...state.openGroups]);
+      renderSidebar();
+    });
+    const all = document.createElement('button');
+    all.className = 'sg-all';
+    const allOn = on===specs.length;
+    all.textContent = allOn ? 'none' : 'all';
+    all.title = allOn ? `Hide all ${gLabel} specs` : `Show all ${gLabel} specs`;
+    all.addEventListener('click', ()=>{
+      specs.forEach(s=> allOn ? state.specs.delete(s.key) : state.specs.add(s.key));
+      persistSpecs(); renderSidebar(); renderStage();
+    });
+    head.append(name, all);
+
+    const items = document.createElement('div');
+    items.className = 'sg-items';
+    specs.forEach(s=>{
+      const lab = document.createElement('label');
+      lab.className = 'spec-toggle';
+      const dir = s.better==='high' ? '▲ better' : s.better==='low' ? '▼ better' : '';
+      lab.innerHTML = `<input type="checkbox" ${state.specs.has(s.key)?'checked':''}><span class="switch"></span><span class="lbl">${esc(s.label)}</span>${dir?`<span class="dir" title="${s.better==='high'?'Higher is better':'Lower is better'}">${dir.split(' ')[0]}</span>`:''}`;
+      lab.querySelector('input').addEventListener('change', e=>{
+        e.target.checked ? state.specs.add(s.key) : state.specs.delete(s.key);
+        persistSpecs(); renderSidebar(); renderStage();
+      });
+      items.appendChild(lab);
+    });
+    wrap.append(head, items);
+    body.appendChild(wrap);
+  });
+  document.getElementById('specCount').textContent = `${state.specs.size}/${SPECS.length}`;
+  document.getElementById('diffOnly').classList.toggle('on', state.diffOnly);
+}
+
+function setCollapsed(c){
+  document.body.classList.toggle('sb-collapsed', c);
+  const btn = document.getElementById('sbToggle');
+  btn.textContent = c ? '»' : '«';
+  btn.title = c ? 'Expand specs panel' : 'Collapse specs panel';
+  btn.setAttribute('aria-expanded', !c);
+  LS.set('shipcompare_collapsed', c);
+}
+
+/* ---------- comparison stage ---------- */
+function renderStage(){
+  const stage = document.getElementById('stage');
+  const ships = state.ships.map(s=>BY_SLUG.get(s));
+  document.getElementById('clearAll').style.display = ships.length ? '' : 'none';
+  document.getElementById('copyLink').style.display = ships.length ? '' : 'none';
+
+  if(!ships.length){
+    stage.innerHTML = `<div class="empty">
+      <h2>NO SHIPS SELECTED</h2>
+      <p>Use the picker above to add ships as columns — or start from one of these:</p>
+      <div class="starter">${STARTERS.map(([n,list],i)=>`<button data-i="${i}">${esc(n)}</button>`).join('')}</div>
+      <div class="hint">Each stat is ranked among the ships you pick: green is best, red is worst.</div>
+    </div>`;
+    stage.querySelectorAll('.starter button').forEach(b=> b.addEventListener('click', ()=>{
+      state.ships = STARTERS[+b.dataset.i][1].filter(s=>BY_SLUG.has(s));
+      persistShips(); renderStage();
+    }));
+    return;
+  }
+
+  // Work out each visible spec row first, so the "leads in" tally only counts what's on screen.
+  const rows = [];
+  GROUPS.forEach(([g, gLabel])=>{
+    const specs = SPECS.filter(s=>s.group===g && state.specs.has(s.key));
+    const groupRows = [];
+    specs.forEach(spec=>{
+      const vals = ships.map(r=>specVal(spec, r));
+      const disp = ships.map(r=>specDisplay(spec, r));
+      if(state.diffOnly && ships.length>1){
+        const keys = disp.map(d=>d ?? '');
+        if(keys.every(k=>k===keys[0])) return;
+      }
+      const numeric = spec.kind==='num';
+      const ranks = numeric ? rankAll(vals, spec.better) : vals.map(()=>null);
+      const present = numeric ? vals.filter(v=>v!=null) : [];
+      const max = present.length ? Math.max(...present) : null;
+      const worstRank = Math.max(0, ...ranks.filter(r=>r!=null));
+      const distinct = new Set(present).size;
+      groupRows.push({spec, vals, disp, ranks, max, worstRank, distinct, rankedCount:present.length});
+    });
+    if(groupRows.length) rows.push({group:gLabel, rows:groupRows});
+  });
+
+  const wins = ships.map(()=>0);
+  rows.forEach(g=>g.rows.forEach(r=>{
+    if(r.spec.better && r.rankedCount>1 && r.distinct>1) r.ranks.forEach((rk,i)=>{ if(rk===1) wins[i]++; });
+  }));
+  const maxWins = Math.max(...wins);
+
+  const table = document.createElement('table');
+  table.className = 'cmp';
+
+  // header
+  const thead = document.createElement('thead');
+  const htr = document.createElement('tr');
+  const corner = document.createElement('th');
+  corner.className = 'lblcol';
+  corner.textContent = `${ships.length} ship${ships.length===1?'':'s'}`;
+  htr.appendChild(corner);
+  ships.forEach((r,i)=>{
+    const th = document.createElement('th');
+    th.className = 'shipcol ship-head';
+    const isTop = ships.length>1 && maxWins>0 && wins[i]===maxWins;
+    th.innerHTML = `
+      <div class="sh-img">
+        ${r.image ? `<img src="${esc(r.image)}" alt="" loading="lazy">` : ''}
+        <div class="sh-tools">
+          <button class="mv" data-d="-1" title="Move left" aria-label="Move ${esc(r.name)} left" ${i===0?'disabled':''}>‹</button>
+          <button class="mv" data-d="1" title="Move right" aria-label="Move ${esc(r.name)} right" ${i===ships.length-1?'disabled':''}>›</button>
+          <button class="rm" title="Remove" aria-label="Remove ${esc(r.name)}">×</button>
+        </div>
+      </div>
+      <div class="sh-name">${r.storeUrl ? `<a href="${esc(r.storeUrl)}" target="_blank" rel="noopener">${esc(r.name)}</a>` : esc(r.name)}</div>
+      <div class="sh-manu">${esc(r.manufacturer || '')}${r.size ? ' · ' + esc(r.size) : ''}</div>
+      ${ships.length>1 ? `<div class="sh-wins${isTop?' top':''}" title="Specs (among those shown) where this ship ranks #1">Leads in <b>${wins[i]}</b>${isTop?'<span class="crown">TOP</span>':''}</div>` : ''}`;
+    th.querySelector('.rm').addEventListener('click', ()=> removeShip(r.slug));
+    th.querySelectorAll('.mv').forEach(b=> b.addEventListener('click', ()=> moveShip(i, +b.dataset.d)));
+    htr.appendChild(th);
+  });
+  thead.appendChild(htr);
+  table.appendChild(thead);
+
+  // body
+  const tbody = document.createElement('tbody');
+  if(!rows.length){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="lblcol"></td><td colspan="${ships.length}" style="padding:24px;color:var(--text-faint)">${state.diffOnly && state.specs.size ? 'Every shown spec is identical across these ships.' : 'No specs turned on — pick some from the panel on the left.'}</td>`;
+    tbody.appendChild(tr);
+  }
+  rows.forEach(g=>{
+    const gtr = document.createElement('tr');
+    gtr.className = 'grp';
+    gtr.innerHTML = `<td class="lblcol">${esc(g.group)}</td><td colspan="${ships.length}"></td>`;
+    tbody.appendChild(gtr);
+    g.rows.forEach(row=>{
+      const {spec} = row;
+      const tr = document.createElement('tr');
+      const lab = document.createElement('td');
+      lab.className = 'lblcol';
+      const dirTxt = spec.better==='high' ? 'higher is better' : spec.better==='low' ? 'lower is better' : '';
+      lab.innerHTML = `${esc(spec.label)}${dirTxt||spec.note ? `<span class="lbl-dir">${[spec.note, dirTxt].filter(Boolean).join(' · ')}</span>` : ''}`;
+      tr.appendChild(lab);
+      const showRank = spec.better && row.rankedCount>1 && row.distinct>1;
+      ships.forEach((r,i)=>{
+        const td = document.createElement('td');
+        td.className = 'v';
+        const d = row.disp[i];
+        const isText = spec.kind!=='num' || spec.textual;
+        let rankHtml = '';
+        if(showRank && row.ranks[i]!=null){
+          const rk = row.ranks[i];
+          if(rk===1) td.classList.add('best');
+          else if(rk===row.worstRank) td.classList.add('worst');
+          rankHtml = `<span class="rank" title="Rank ${rk} of ${row.rankedCount}">#${rk}</span>`;
+        }
+        let barHtml = '';
+        if(spec.kind==='num' && !spec.textual && row.vals[i]!=null && row.max>0 && ships.length>1){
+          const pct = Math.max(2, Math.min(100, row.vals[i]/row.max*100));
+          barHtml = `<div class="bar"><span style="width:${pct.toFixed(1)}%"></span></div>`;
+        }
+        td.innerHTML = `<div class="vline"><span class="vtxt${isText?' text':''}">${d==null?'<span class="dash">—</span>':d}</span>${rankHtml}</div>${barHtml}`;
+        if(spec.tooltip){
+          const tip = spec.tooltip(r);
+          if(tip){ td.title = tip; td.classList.add('has-tip'); }
+        }
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  });
+  table.appendChild(tbody);
+
+  const wrap = document.createElement('div');
+  wrap.className = 'cmp-wrap';
+  wrap.appendChild(table);
+  const prevScroll = stage.querySelector('.cmp-wrap');
+  const sx = prevScroll ? prevScroll.scrollLeft : 0, sy = prevScroll ? prevScroll.scrollTop : 0;
+  stage.innerHTML = '';
+  stage.appendChild(wrap);
+  wrap.scrollLeft = sx; wrap.scrollTop = sy;
+}
+
+function addShip(slug){
+  if(!BY_SLUG.has(slug) || state.ships.includes(slug)) return;
+  if(state.ships.length >= MAX_SHIPS){ toast(`Up to ${MAX_SHIPS} ships at once`); return; }
+  state.ships.push(slug);
+  persistShips(); renderStage();
+  requestAnimationFrame(()=>{ const w = document.querySelector('.cmp-wrap'); if(w) w.scrollLeft = w.scrollWidth; });
+}
+function removeShip(slug){
+  state.ships = state.ships.filter(s=>s!==slug);
+  persistShips(); renderStage();
+}
+function moveShip(i, d){
+  const j = i + d;
+  if(j<0 || j>=state.ships.length) return;
+  [state.ships[i], state.ships[j]] = [state.ships[j], state.ships[i]];
+  persistShips(); renderStage();
+}
+
+/* ---------- ship picker ---------- */
+const picker = document.getElementById('picker');
+const pInput = document.getElementById('pickerInput');
+const pList = document.getElementById('pickerList');
+let pResults = [], pHl = 0;
+
+function searchShips(q){
+  q = q.trim().toLowerCase();
+  if(!q) return SHIPS.slice().sort((a,b)=>a.name.localeCompare(b.name));
+  const terms = q.split(/\s+/);
+  const scored = [];
+  SHIPS.forEach(s=>{
+    const name = s.name.toLowerCase();
+    const hay = `${name} ${(s.manufacturer||'').toLowerCase()} ${(s.manufacturerFull||'').toLowerCase()} ${(s.classification||'').toLowerCase()} ${(s.focus||'').toLowerCase()} ${(s.size||'').toLowerCase()}`;
+    if(!terms.every(t=>hay.includes(t))) return;
+    const score = name.startsWith(q) ? 0 : name.includes(q) ? 1 : 2;
+    scored.push([score, s]);
+  });
+  return scored.sort((a,b)=> a[0]-b[0] || a[1].name.localeCompare(b[1].name)).map(x=>x[1]);
+}
+function renderPicker(){
+  pResults = searchShips(pInput.value).slice(0, 80);
+  if(pHl >= pResults.length) pHl = Math.max(0, pResults.length-1);
+  if(!pResults.length){ pList.innerHTML = `<div class="pick-empty">No ships match “${esc(pInput.value)}”.</div>`; return; }
+  pList.innerHTML = pResults.map((s,i)=>{
+    const added = state.ships.includes(s.slug);
+    return `<div class="pick${i===pHl?' hl':''}${added?' added':''}" role="option" id="opt-${i}" data-i="${i}" aria-selected="${i===pHl}" aria-disabled="${added}">
+      <img src="${esc(s.image||'')}" alt="" loading="lazy">
+      <div><div class="pn">${esc(s.name)}</div><div class="pm">${esc(s.manufacturer||'')}${s.classification?' · '+esc(s.classification):''}</div></div>
+      <span class="ps">${esc(s.size||'')}</span>
+    </div>`;
+  }).join('');
+  pInput.setAttribute('aria-activedescendant', `opt-${pHl}`);
+}
+function openPicker(){ picker.classList.add('open'); pInput.setAttribute('aria-expanded','true'); renderPicker(); }
+function closePicker(){ picker.classList.remove('open'); pInput.setAttribute('aria-expanded','false'); }
+function choose(i){
+  const s = pResults[i];
+  if(!s || state.ships.includes(s.slug)) return;
+  addShip(s.slug);
+  pInput.value = '';
+  pHl = 0;
+  renderPicker();
+}
+pInput.addEventListener('focus', openPicker);
+pInput.addEventListener('input', ()=>{ pHl = 0; openPicker(); });
+pInput.addEventListener('keydown', e=>{
+  if(e.key==='ArrowDown'){ e.preventDefault(); if(!picker.classList.contains('open')) openPicker(); pHl = Math.min(pResults.length-1, pHl+1); renderPicker(); scrollHl(); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); pHl = Math.max(0, pHl-1); renderPicker(); scrollHl(); }
+  else if(e.key==='Enter'){ e.preventDefault(); choose(pHl); }
+  else if(e.key==='Escape'){ closePicker(); pInput.blur(); }
+});
+function scrollHl(){ const el = pList.querySelector('.pick.hl'); if(el) el.scrollIntoView({block:'nearest'}); }
+pList.addEventListener('mousedown', e=>{
+  const el = e.target.closest('.pick');
+  if(!el) return;
+  e.preventDefault(); // keep focus in the input
+  choose(+el.dataset.i);
+});
+pList.addEventListener('mousemove', e=>{
+  const el = e.target.closest('.pick');
+  if(el && +el.dataset.i!==pHl){ pHl = +el.dataset.i; pList.querySelectorAll('.pick').forEach(p=>p.classList.toggle('hl', +p.dataset.i===pHl)); }
+});
+document.addEventListener('mousedown', e=>{ if(!picker.contains(e.target)) closePicker(); });
+
+/* ---------- misc controls ---------- */
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 1800);
+}
+document.getElementById('copyLink').addEventListener('click', async ()=>{
+  persistShips();
+  try{ await navigator.clipboard.writeText(location.href); toast('Link copied'); }
+  catch(e){ window.prompt('Copy this link:', location.href); }
+});
+document.getElementById('clearAll').addEventListener('click', ()=>{ state.ships = []; persistShips(); renderStage(); });
+document.getElementById('specAll').addEventListener('click', ()=>{ state.specs = new Set(SPECS.map(s=>s.key)); persistSpecs(); renderSidebar(); renderStage(); });
+document.getElementById('specNone').addEventListener('click', ()=>{ state.specs = new Set(); persistSpecs(); renderSidebar(); renderStage(); });
+document.getElementById('specDefault').addEventListener('click', ()=>{ state.specs = new Set(defaultSpecs()); persistSpecs(); renderSidebar(); renderStage(); });
+document.getElementById('diffOnly').addEventListener('click', ()=>{ state.diffOnly = !state.diffOnly; LS.set('shipcompare_diff', state.diffOnly); renderSidebar(); renderStage(); });
+document.getElementById('sbToggle').addEventListener('click', ()=> setCollapsed(!document.body.classList.contains('sb-collapsed')));
+document.getElementById('sbRail').addEventListener('click', ()=> setCollapsed(false));
+document.getElementById('sbBackdrop').addEventListener('click', ()=> setCollapsed(true));
+window.addEventListener('hashchange', ()=>{
+  const fromHash = readShipsFromHash();
+  if(fromHash){ state.ships = [...new Set(fromHash)].slice(0, MAX_SHIPS); LS.set('shipcompare_ships', state.ships); renderStage(); }
+});
+
+const narrow = window.matchMedia('(max-width: 760px)').matches;
+setCollapsed(narrow ? true : !!LS.get('shipcompare_collapsed', false));
+persistShips();
+renderSidebar();
+renderStage();
+</script>
+</body>
+</html>

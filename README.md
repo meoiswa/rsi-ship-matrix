@@ -11,9 +11,13 @@ Live at **https://scsm.meoiswa.cat**
 - `data/ships.json` — a trimmed dataset pulled from the
   [FleetYards.net](https://fleetyards.net) public API (`scripts/fetch_data.py`),
   enriched with a per-ship component-value estimate (`scripts/fetch_components.py`).
-- `template.html` — the page itself, with a `__SHIPS_DATA__` placeholder.
-- `scripts/build.py` — splices `data/ships.json` into `template.html` and
-  writes the result to `dist/index.html`.
+- `template.html` — the matrix page, with a `__SHIPS_DATA__` placeholder.
+- `compare_template.html` — the head-to-head compare page: pick ships as
+  columns, toggle specs from a collapsible sidebar, and each stat is ranked
+  among the selected ships. The selection lives in the URL hash
+  (`compare.html#ships=slug1,slug2`), so comparisons are shareable.
+- `scripts/build.py` — splices `data/ships.json` into both templates and
+  writes `dist/index.html` and `dist/compare.html`.
 - `.github/workflows/deploy.yml` — builds and publishes `dist/` to GitHub
   Pages on every push to `main`.
 
