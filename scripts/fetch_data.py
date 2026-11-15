@@ -43,6 +43,14 @@ def g(d, *path, default=None):
     return cur if cur is not None else default
 
 
+AGILITY_FIELDS = ["pitch", "pitchBoosted", "yaw", "yawBoosted", "roll", "rollBoosted"]
+
+
+def agility(speeds):
+    """Rotation rates in deg/s, regular and boosted."""
+    return {k: g(speeds, k) for k in AGILITY_FIELDS}
+
+
 def trim(it):
     metrics = it.get("metrics") or {}
     speeds = it.get("speeds") or {}
@@ -75,6 +83,7 @@ def trim(it):
         "maxSpeed": g(speeds, "maxSpeed"),
         "scmSpeed": g(speeds, "scmSpeed"),
         "scmSpeedBoosted": g(speeds, "scmSpeedBoosted"),
+        **agility(speeds),
         "pledgePrice": it.get("pledgePrice"),
         "gamePrice": it.get("price"),
         "buyPriceMin": min(buy_prices) if buy_prices else None,

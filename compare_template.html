@@ -297,6 +297,7 @@ td.v{ padding:8px 12px; vertical-align:middle; font-size:14px; position:relative
 .vtxt{ font-family:'JetBrains Mono',monospace; font-variant-numeric:tabular-nums; font-size:13.5px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .vtxt.text{ font-family:'Rajdhani',sans-serif; font-size:14.5px; font-weight:600; white-space:normal; }
 .unit{ color:var(--text-faint); font-size:11px; margin-left:2px; }
+.boost{ color:var(--text-dim); font-weight:400; }
 .rank{
   margin-left:auto; flex:none;
   font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600;
@@ -464,6 +465,9 @@ const SPECS = [
   {key:'scmSpeed', label:'SCM speed', group:'perf', kind:'num', better:'high', unit:'m/s', def:true},
   {key:'scmSpeedBoosted', label:'SCM boosted', group:'perf', kind:'num', better:'high', unit:'m/s', def:false},
   {key:'maxSpeed', label:'Max speed', group:'perf', kind:'num', better:'high', unit:'m/s', def:true},
+  {key:'pitch', label:'Pitch', group:'perf', kind:'num', better:'high', unit:'°/s', boost:'pitchBoosted', note:'regular / boosted', def:true},
+  {key:'yaw', label:'Yaw', group:'perf', kind:'num', better:'high', unit:'°/s', boost:'yawBoosted', note:'regular / boosted', def:true},
+  {key:'roll', label:'Roll', group:'perf', kind:'num', better:'high', unit:'°/s', boost:'rollBoosted', note:'regular / boosted', def:true},
   {key:'quantumFuelTankSize', label:'Quantum fuel', group:'perf', kind:'num', better:'high', unit:'µSCU', def:false},
   {key:'hydrogenFuelTankSize', label:'Hydrogen fuel', group:'perf', kind:'num', better:'high', unit:'SCU', def:false},
 
@@ -536,7 +540,9 @@ function specDisplay(spec, r){
   const v = specVal(spec, r);
   if(v==null) return null;
   if(spec.kind==='text') return esc(v);
-  let s = spec.int ? fmtInt(v) : fmtDec(v, spec.dec ?? 2);
+  const fmtV = x => spec.int ? fmtInt(x) : fmtDec(x, spec.dec ?? 2);
+  let s = fmtV(v);
+  if(spec.boost && r[spec.boost]!=null) s += `<span class="boost"> / ${fmtV(r[spec.boost])}</span>`;
   if(spec.prefix) s = spec.prefix + s;
   if(spec.unit) s += `<span class="unit">${esc(spec.unit)}</span>`;
   return s;
