@@ -556,6 +556,8 @@ const COLUMNS = [
   ...['pitch','yaw','roll'].map(k=>({key:k, label:k[0].toUpperCase()+k.slice(1)+' (boost)', group:'perf', def:false, sort:'num',
     fmt:r=> r[k]==null ? null : `${fmtNum(r[k])}${r[k+'Boosted']!=null ? ' / '+fmtNum(r[k+'Boosted']) : ''} °/s`,
     tooltip:r=> r[k]==null || r[k+'Boosted']==null ? null : `Regular ${fmtNum(r[k])} °/s · boosted ${fmtNum(r[k+'Boosted'])} °/s`})),
+  {key:'quantumDriveSize', label:'QD Size', group:'perf', def:false, sort:'num', prefix:'S',
+    tooltip:r=>r.quantumDriveSize==null ? null : `Stock drive: ${r.quantumDriveName || 'unknown'}${r.quantumDriveGrade!=null ? ', grade '+r.quantumDriveGrade : ''} (size ${r.quantumDriveSize})`},
   {key:'quantumFuelTankSize', label:'QT Fuel', group:'perf', def:false, sort:'num', unit:'µSCU'},
   {key:'hydrogenFuelTankSize', label:'H2 Fuel', group:'perf', def:false, sort:'num', unit:'SCU'},
   {key:'hullHealth', label:'Hull HP (weakest part)', group:'combat', def:false, sort:'num', fmt:r=>{

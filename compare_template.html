@@ -469,6 +469,8 @@ const SPECS = [
   {key:'pitch', label:'Pitch', group:'perf', kind:'num', better:'high', unit:'°/s', boost:'pitchBoosted', note:'regular / boosted', def:true},
   {key:'yaw', label:'Yaw', group:'perf', kind:'num', better:'high', unit:'°/s', boost:'yawBoosted', note:'regular / boosted', def:true},
   {key:'roll', label:'Roll', group:'perf', kind:'num', better:'high', unit:'°/s', boost:'rollBoosted', note:'regular / boosted', def:true},
+  {key:'quantumDriveSize', label:'Quantum drive size', group:'perf', kind:'num', better:'high', prefix:'S', int:true, def:false,
+    tooltip:r=>r.quantumDriveName ? `Stock drive: ${r.quantumDriveName}${r.quantumDriveGrade!=null ? ', grade '+r.quantumDriveGrade : ''}` : null},
   {key:'quantumFuelTankSize', label:'Quantum fuel', group:'perf', kind:'num', better:'high', unit:'µSCU', def:false},
   {key:'hydrogenFuelTankSize', label:'Hydrogen fuel', group:'perf', kind:'num', better:'high', unit:'SCU', def:false},
 

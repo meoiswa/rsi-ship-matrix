@@ -74,5 +74,13 @@ weakest ship-destroying section's HP in parenthesis — for multi-hull ships
 that's the one that actually caps how much punishment the ship can take
 before it's lost; hovering the value names that section.
 
+**Quantum drive size.** Also from scunpacked-data: the size of the quantum
+drive the ship ships with, which is also the hardpoint size and so caps
+which aftermarket drives fit it. Hovering names the stock drive and its
+grade. Quantum fuel capacity sits next to it in the Performance group,
+from FleetYards. Blank means either no quantum drive at all (ground
+vehicles, snub craft) or no loadout data yet — currently 157 of 246 ships
+have a drive on record.
+
 The "My Notes" column (saved in your browser's local storage) is still
 there for tracking your own numbers on top of all this.

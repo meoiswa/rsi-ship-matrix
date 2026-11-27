@@ -43,6 +43,10 @@ energy damage the hull actually takes, expressed as a resistance percentage
 (e.g. 20 means the hull takes 20% less physical damage than the raw weapon
 damage would otherwise do).
 
+Quantum drive, from scunpacked's `Loadout`: the size of the drive the
+ship ships with (plus its name and grade, shown on hover), which is what
+caps which aftermarket drives fit the hardpoint.
+
 Critical part HP, from scunpacked's top-level `Health` and
 `DamageBeforeDestruction`: the latter lists the hull section(s) whose own
 destruction destroys the whole ship (for single-hull ships, usually the
@@ -390,6 +394,32 @@ def compute_armor(ship_json_path):
     }
 
 
+def iter_quantum_drives(loadout):
+    """Every quantum drive in a loadout tree. Nearly always a single
+    top-level entry, but the Hull C hangs its drive off a sub-part."""
+    for entry in loadout or []:
+        if (entry.get("Type") or "").startswith("QuantumDrive"):
+            yield entry
+        yield from iter_quantum_drives(entry.get("Loadout"))
+
+
+def compute_quantum_drive(ship_json_path):
+    """Size (and name/grade, for the hover) of the ship's stock quantum
+    drive, from scunpacked's Loadout. No ship currently flies more than
+    one, so the first one found is the one we report. Ground vehicles and
+    snub craft have none.
+    """
+    d = json.load(open(ship_json_path, encoding="utf-8"))
+    for e in iter_quantum_drives(d.get("Loadout")):
+        size = e.get("InstalledSize") or e.get("MaxSize")
+        if not size:
+            continue
+        manu = e.get("ManufacturerName") or ""
+        name = " ".join(x for x in (manu if manu != "Unknown Manufacturer" else "", e.get("Name") or "") if x)
+        return {"size": size, "name": name.strip() or None, "grade": e.get("Grade")}
+    return None
+
+
 def compute_critical_hp(ship_json_path):
     """Total hull HP alongside the weakest ship-destroying section's HP,
     from scunpacked's top-level Health and DamageBeforeDestruction (the
@@ -428,6 +458,7 @@ def main():
         cargo_fixed = 0
         armor_matched = 0
         critical_matched = 0
+        quantum_matched = 0
         for ship in ships:
             base = match_ship(ship, by_code, bases)
             if not base:
@@ -443,6 +474,9 @@ def main():
                 ship["armorEnergy"] = None
                 ship["criticalPartHp"] = None
                 ship["criticalPartName"] = None
+                ship["quantumDriveSize"] = None
+                ship["quantumDriveName"] = None
+                ship["quantumDriveGrade"] = None
                 continue
 
             ship_path = os.path.join(ships_dir, base + ".json")
@@ -502,11 +536,23 @@ def main():
                 ship["criticalPartHp"] = None
                 ship["criticalPartName"] = None
 
+            quantum = compute_quantum_drive(ship_path)
+            if quantum:
+                quantum_matched += 1
+                ship["quantumDriveSize"] = quantum["size"]
+                ship["quantumDriveName"] = quantum["name"]
+                ship["quantumDriveGrade"] = quantum["grade"]
+            else:
+                ship["quantumDriveSize"] = None
+                ship["quantumDriveName"] = None
+                ship["quantumDriveGrade"] = None
+
         print(f"Computed component value for {matched}/{len(ships)} ships", file=sys.stderr)
         print(f"Computed gun value for {gun_matched}/{len(ships)} ships", file=sys.stderr)
         print(f"Corrected/split cargo total for {cargo_fixed} ships from scunpacked CargoGrids", file=sys.stderr)
         print(f"Computed armor resistance for {armor_matched}/{len(ships)} ships", file=sys.stderr)
         print(f"Computed weakest critical-part HP for {critical_matched}/{len(ships)} ships", file=sys.stderr)
+        print(f"Found a stock quantum drive for {quantum_matched}/{len(ships)} ships", file=sys.stderr)
 
     with open(DATA_PATH, "w", encoding="utf-8") as f:
         json.dump(ships, f, separators=(",", ":"))
